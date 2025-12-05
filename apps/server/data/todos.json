@@ -2,7 +2,7 @@
   {
     "id": 1,
     "title": "모노레포로 변경하기",
-    "completed": false,
+    "completed": true,
     "userId": 1
   },
   {
@@ -14,6 +14,12 @@
   {
     "id": 3,
     "title": "쩡혜랑 밥",
+    "completed": false,
+    "userId": 1
+  },
+  {
+    "id": 4,
+    "title": "엄청 긴 할일을 추가하고 싶은데 뭐라고 적을지 모르겠지만 일단 적는다.",
     "completed": false,
     "userId": 1
   }

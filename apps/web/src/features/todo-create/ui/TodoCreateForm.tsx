@@ -1,43 +1,48 @@
-import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { todoApi } from '@entities/todo/api/todoApi'
-import { Button } from '@shared/ui/button'
-import { Input } from '@shared/ui/input'
-import { Plus } from 'lucide-react'
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { todoApi } from '@entities/todo/api/todoApi';
+import { Button } from '@shared/ui/button';
+import { Input } from '@shared/ui/input';
+import { Plus } from 'lucide-react';
 
 export const TodoCreateForm = () => {
-  const [title, setTitle] = useState('')
-  const queryClient = useQueryClient()
+  const [title, setTitle] = useState('');
+  const queryClient = useQueryClient();
 
   const createMutation = useMutation({
     mutationFn: todoApi.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['todos'] })
-      setTitle('')
+      queryClient.invalidateQueries({ queryKey: ['todos'] });
+      setTitle('');
     },
-  })
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (title.trim()) {
-      createMutation.mutate({ title: title.trim() })
+      createMutation.mutate({ title: title.trim() });
     }
-  }
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
+    <form
+      onSubmit={handleSubmit}
+      className='flex gap-2 mb-6'
+    >
       <Input
-        type="text"
+        type='text'
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="새로운 할 일을 입력하세요..."
-        className="flex-1"
+        placeholder='새로운 할 일을 입력하세요...'
+        className='flex-1'
       />
-      <Button type="submit" disabled={createMutation.isPending || !title.trim()}>
-        <Plus className="w-4 h-4 mr-2" />
+      <Button
+        type='submit'
+        disabled={createMutation.isPending || !title.trim()}
+      >
+        <Plus className='w-4 h-4 mr-2' />
         추가
       </Button>
     </form>
-  )
-}
-
+  );
+};

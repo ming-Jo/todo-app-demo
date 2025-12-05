@@ -1,18 +1,17 @@
 export interface Todo {
-  id: number
-  title: string
-  completed: boolean
-  userId: number
+  id: number;
+  title: string;
+  completed: boolean;
+  userId: number;
 }
 
 export interface CreateTodoDto {
-  title: string
-  completed?: boolean
-  userId?: number
+  title: string;
+  completed?: boolean;
+  userId?: number;
 }
 
 export interface UpdateTodoDto {
-  title?: string
-  completed?: boolean
+  title?: string;
+  completed?: boolean;
 }
-
