@@ -9,7 +9,7 @@ export const TodoViewToggle = () => {
   const { viewMode, setViewMode } = useTodoStore();
 
   return (
-    <div className='flex gap-2 border rounded-lg p-1 bg-muted/50'>
+    <div className='flex gap-1 border rounded-lg p-1 bg-muted/50'>
       <Button
         variant={viewMode === 'list' ? 'default' : 'ghost'}
         size='sm'

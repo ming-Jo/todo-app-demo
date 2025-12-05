@@ -1,6 +1,7 @@
 import { TodoList } from '@widgets/todo-list';
 
 import { TodoCreateForm } from '@features/todo-create';
+import { TodoFilter } from '@features/todo-filter';
 import { TodoViewToggle } from '@features/todo-view-toggle';
 
 import { Card, CardHeader, CardTitle, CardContent } from '@shared/ui';
@@ -9,16 +10,19 @@ export const TodoPage = () => {
   return (
     <div className='min-h-screen bg-background p-4 md:p-8'>
       <div className='max-w-7xl mx-auto'>
-        <Card className='mb-6'>
+        <Card className='mb-6 bg-slate-800'>
           <CardHeader>
-            <CardTitle>Todo App</CardTitle>
+            <CardTitle className='text-white'>TO DO</CardTitle>
           </CardHeader>
           <CardContent>
             <TodoCreateForm />
           </CardContent>
         </Card>
         <div className='flex flex-col gap-2'>
-          <TodoViewToggle />
+          <div className='flex justify-between items-center'>
+            <TodoFilter />
+            <TodoViewToggle />
+          </div>
           <TodoList />
         </div>
       </div>

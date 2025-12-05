@@ -29,7 +29,7 @@ export const TodoCreateForm = () => {
   return (
     <form
       onSubmit={handleSubmit}
-      className='flex gap-2 mb-6'
+      className='flex gap-2'
     >
       <Input
         type='text'
@@ -40,6 +40,7 @@ export const TodoCreateForm = () => {
       />
       <Button
         type='submit'
+        variant='outline'
         disabled={createMutation.isPending || !title.trim()}
       >
         <Plus className='w-4 h-4 mr-2' />

@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { TodoFilter } from '@features/todo-filter';
 import { TodoItem } from '@features/todo-item';
 
 import { todoApi, useTodoStore, type Todo } from '@entities/todo';
@@ -135,17 +134,12 @@ export const TodoList = () => {
     );
   }
 
-  return (
-    <div className='flex flex-col gap-2'>
-      <TodoFilter />
-      {viewMode === 'list' ? (
-        <ListView todos={filteredTodos} />
-      ) : (
-        <KanbanView
-          todos={filteredTodos}
-          filter={filter}
-        />
-      )}
-    </div>
+  return viewMode === 'list' ? (
+    <ListView todos={filteredTodos} />
+  ) : (
+    <KanbanView
+      todos={filteredTodos}
+      filter={filter}
+    />
   );
 };

@@ -85,7 +85,7 @@ export const TodoItem = ({ todo, viewMode = 'list' }: TodoItemProps) => {
             value={editingTitle}
             onChange={(e) => setEditingTitle(e.target.value)}
             onKeyDown={handleKeyDown}
-            className='w-full text-base font-medium border-2 focus:border-primary transition-colors'
+            className='w-full text-base font-medium transition-colors'
             autoFocus
             disabled={updateMutation.isPending}
           />
