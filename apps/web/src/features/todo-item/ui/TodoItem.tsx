@@ -10,9 +10,10 @@ import { cn } from '@shared/lib/utils'
 
 interface TodoItemProps {
   todo: Todo
+  viewMode?: 'list' | 'kanban'
 }
 
-export const TodoItem = ({ todo }: TodoItemProps) => {
+export const TodoItem = ({ todo, viewMode = 'list' }: TodoItemProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editingTitle, setEditingTitle] = useState(todo.title)
   const queryClient = useQueryClient()
@@ -69,73 +70,126 @@ export const TodoItem = ({ todo }: TodoItemProps) => {
   }
 
   return (
-    <div className="flex items-center gap-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors">
-      <Checkbox
-        checked={todo.completed}
-        onChange={handleToggle}
-        disabled={updateMutation.isPending || isEditing}
-      />
+    <div
+      className={cn(
+        'group relative bg-card/50 backdrop-blur-sm border border-border/50 rounded-xl p-5',
+        'shadow-sm transition-all duration-300',
+        'hover:bg-accent/50 hover:border-accent-foreground/20',
+        todo.completed && 'opacity-75 bg-muted/30'
+      )}
+    >
       {isEditing ? (
-        <>
+        <div className="space-y-4">
           <Input
             type="text"
             value={editingTitle}
-            onChange={(e) => setEditingTitle(e.target.value)}
+            onChange={e => setEditingTitle(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1"
+            className="w-full text-base font-medium border-2 focus:border-primary transition-colors"
             autoFocus
             disabled={updateMutation.isPending}
           />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleSave}
-            disabled={updateMutation.isPending || !editingTitle.trim()}
-            className="text-green-600 hover:text-green-700"
-          >
-            <Check className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleCancel}
-            disabled={updateMutation.isPending}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </>
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSave}
+              disabled={updateMutation.isPending || !editingTitle.trim()}
+              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-colors"
+            >
+              <Check className="w-4 h-4 mr-1.5" />
+              저장
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCancel}
+              disabled={updateMutation.isPending}
+              className="text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <X className="w-4 h-4 mr-1.5" />
+              취소
+            </Button>
+          </div>
+        </div>
       ) : (
-        <>
-          <span
+        <div className="relative">
+          <div
             className={cn(
-              'flex-1 text-sm',
-              todo.completed && 'line-through text-muted-foreground'
+              'flex items-start gap-3 transition-all',
+              viewMode === 'list' && 'pr-20 group-hover:pr-20'
             )}
           >
-            {todo.title}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleEdit}
-            disabled={updateMutation.isPending || deleteMutation.isPending}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Edit2 className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleDelete}
-            disabled={deleteMutation.isPending}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
-        </>
+            <div className="pt-0.5 flex-shrink-0">
+              <Checkbox
+                checked={todo.completed}
+                onChange={handleToggle}
+                disabled={updateMutation.isPending || isEditing}
+                className="transition-all"
+              />
+            </div>
+            <span
+              className={cn(
+                'flex-1 text-base leading-relaxed font-medium transition-all duration-200 break-words',
+                todo.completed ? 'line-through text-muted-foreground/60' : 'text-foreground'
+              )}
+            >
+              {todo.title}
+            </span>
+          </div>
+          {viewMode === 'list' ? (
+            <div className="absolute right-0 top-0 flex gap-1 h-full items-center opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto">
+              <div className="flex gap-1 bg-card rounded-lg p-1 shadow-lg border border-border">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleEdit}
+                  disabled={updateMutation.isPending || deleteMutation.isPending}
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-all"
+                  title="편집"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all"
+                  title="삭제"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto z-10">
+              <div className="flex gap-1 bg-card rounded-lg p-1 shadow-lg border border-border">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleEdit}
+                  disabled={updateMutation.isPending || deleteMutation.isPending}
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-all"
+                  title="편집"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all"
+                  title="삭제"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   )
 }
-

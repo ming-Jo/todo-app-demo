@@ -1,6 +1,5 @@
 import { useTodoStore } from '@entities/todo/model/store'
 import { Button } from '@shared/ui/button'
-import { cn } from '@shared/lib/utils'
 
 export const TodoFilter = () => {
   const { filter, setFilter } = useTodoStore()
@@ -12,8 +11,8 @@ export const TodoFilter = () => {
   ]
 
   return (
-    <div className="flex gap-2 mb-6">
-      {filters.map((f) => (
+    <div className="flex gap-2 p-1">
+      {filters.map(f => (
         <Button
           key={f.value}
           variant={filter === f.value ? 'default' : 'outline'}
@@ -26,4 +25,3 @@ export const TodoFilter = () => {
     </div>
   )
 }
-
