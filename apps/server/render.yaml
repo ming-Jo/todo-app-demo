@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: todo-api-server
+    env: node
+    # Monorepo 루트에서 빌드
+    buildCommand: cd ../.. && pnpm install --frozen-lockfile && cd apps/server
+    # 서버 시작 명령어
+    startCommand: node server.js
+    # 무료 플랜 사용
+    plan: free
+    # 환경 변수
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        generateValue: true
+      # CORS 허용 도메인 설정
+      - key: ALLOWED_ORIGINS
+        value: https://ming-Jo.github.io
+      # Rate Limiting 설정
+      - key: RATE_LIMIT_MAX
+        value: '100'
+    # 헬스체크 설정
+    # Render는 이 경로를 주기적으로 호출하여 서비스를 활성 상태로 유지
+    healthCheckPath: /health
