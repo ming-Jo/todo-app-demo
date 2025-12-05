@@ -1,5 +1,5 @@
 {
-  "name": "todo-api-server",
+  "name": "server",
   "version": "1.0.0",
   "description": "Todo API server with Express and JSON file storage",
   "type": "module",
@@ -13,4 +13,3 @@
     "cors": "^2.8.5"
   }
 }
-
