@@ -1,7 +1,9 @@
-import { useTodoStore } from '@entities/todo/model/store';
-import { Button } from '@shared/ui/button';
 import { List, LayoutGrid } from 'lucide-react';
+
+import { useTodoStore } from '@entities/todo';
+
 import { cn } from '@shared/lib/utils';
+import { Button } from '@shared/ui';
 
 export const TodoViewToggle = () => {
   const { viewMode, setViewMode } = useTodoStore();

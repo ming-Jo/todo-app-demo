@@ -1,4 +1,5 @@
 import { apiClient } from '@shared/api/client';
+
 import type { Todo, CreateTodoDto, UpdateTodoDto } from '../model/types';
 
 export const todoApi = {

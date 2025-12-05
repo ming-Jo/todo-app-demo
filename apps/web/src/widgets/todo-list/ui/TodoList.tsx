@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { todoApi } from '@entities/todo/api/todoApi';
-import { useTodoStore } from '@entities/todo/model/store';
-import { TodoItem } from '@features/todo-item/ui/TodoItem';
-import { Card, CardHeader, CardTitle, CardContent } from '@shared/ui/card';
-import type { Todo } from '@entities/todo/model/types';
-import { TodoFilter } from '@/features/todo-filter/ui/TodoFilter';
+
+import { TodoFilter } from '@features/todo-filter';
+import { TodoItem } from '@features/todo-item';
+
+import { todoApi, useTodoStore, type Todo } from '@entities/todo';
+
+import { Card, CardHeader, CardTitle, CardContent } from '@shared/ui';
 
 interface KanbanColumnProps {
   title: string;

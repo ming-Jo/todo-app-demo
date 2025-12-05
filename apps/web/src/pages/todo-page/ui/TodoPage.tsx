@@ -1,7 +1,9 @@
-import { TodoCreateForm } from '@features/todo-create/ui/TodoCreateForm';
-import { TodoViewToggle } from '@features/todo-view-toggle/ui/TodoViewToggle';
-import { TodoList } from '@widgets/todo-list/ui/TodoList';
-import { Card, CardHeader, CardTitle, CardContent } from '@shared/ui/card';
+import { TodoList } from '@widgets/todo-list';
+
+import { TodoCreateForm } from '@features/todo-create';
+import { TodoViewToggle } from '@features/todo-view-toggle';
+
+import { Card, CardHeader, CardTitle, CardContent } from '@shared/ui';
 
 export const TodoPage = () => {
   return (

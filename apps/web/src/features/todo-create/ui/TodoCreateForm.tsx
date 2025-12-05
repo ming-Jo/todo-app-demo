@@ -1,9 +1,11 @@
 import { useState } from 'react';
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { todoApi } from '@entities/todo/api/todoApi';
-import { Button } from '@shared/ui/button';
-import { Input } from '@shared/ui/input';
 import { Plus } from 'lucide-react';
+
+import { todoApi } from '@entities/todo';
+
+import { Button, Input } from '@shared/ui';
 
 export const TodoCreateForm = () => {
   const [title, setTitle] = useState('');

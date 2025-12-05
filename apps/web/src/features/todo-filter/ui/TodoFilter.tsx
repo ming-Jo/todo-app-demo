@@ -1,5 +1,6 @@
-import { useTodoStore } from '@entities/todo/model/store';
-import { Button } from '@shared/ui/button';
+import { useTodoStore } from '@entities/todo';
+
+import { Button } from '@/shared/ui/button/button';
 
 export const TodoFilter = () => {
   const { filter, setFilter } = useTodoStore();

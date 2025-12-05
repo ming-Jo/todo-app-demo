@@ -1,12 +1,12 @@
 import { useState } from 'react';
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { todoApi } from '@entities/todo/api/todoApi';
-import { Checkbox } from '@shared/ui/checkbox';
-import { Button } from '@shared/ui/button';
-import { Input } from '@shared/ui/input';
 import { Trash2, Edit2, Check, X } from 'lucide-react';
-import type { Todo } from '@entities/todo/model/types';
+
+import { todoApi, type Todo } from '@entities/todo';
+
 import { cn } from '@shared/lib/utils';
+import { Checkbox, Button, Input } from '@shared/ui';
 
 interface TodoItemProps {
   todo: Todo;

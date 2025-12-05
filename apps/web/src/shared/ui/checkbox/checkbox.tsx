@@ -1,5 +1,7 @@
 import * as React from 'react';
+
 import { Check } from 'lucide-react';
+
 import { cn } from '@shared/lib/utils';
 
 export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {}
@@ -32,3 +34,4 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
 Checkbox.displayName = 'Checkbox';
 
 export { Checkbox };
+
