@@ -68,8 +68,11 @@ app.use((req, res, next) => {
     return res.status(401).json({ error: 'User ID is required. Please provide x-user-id header.' });
   }
 
+  // 헤더 값이 배열인 경우 첫 번째 값 사용, 아니면 문자열 그대로 사용
+  const userIdString = Array.isArray(userId) ? userId[0] : String(userId);
+
   // req.userId에 저장하여 다음 미들웨어에서 사용
-  req.userId = userId; // UUID 문자열로 저장
+  req.userId = userIdString; // UUID 문자열로 저장
 
   next();
 });

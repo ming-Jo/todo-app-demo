@@ -1,6 +1,19 @@
 import type { Todo, CreateTodoDto, UpdateTodoDto } from '../model/types';
 
 const STORAGE_KEY = 'todos';
+const USER_ID_STORAGE_KEY = 'todo-app-user-id';
+
+// 로컬 사용자 ID 가져오기 또는 생성
+function getOrCreateLocalUserId(): string {
+  const storedUserId = localStorage.getItem(USER_ID_STORAGE_KEY);
+  if (storedUserId) {
+    return storedUserId;
+  }
+  // 로컬에서 ID 생성
+  const localId = `local-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  localStorage.setItem(USER_ID_STORAGE_KEY, localId);
+  return localId;
+}
 
 // localStorage에서 todos 읽기
 function getTodosFromStorage(): Todo[] {
@@ -52,7 +65,7 @@ export const localStorageApi = {
       id: maxId + 1,
       title: data.title,
       completed: data.completed ?? false,
-      userId: data.userId ?? 1,
+      userId: data.userId ?? getOrCreateLocalUserId(),
     };
     todos.push(newTodo);
     saveTodosToStorage(todos);
