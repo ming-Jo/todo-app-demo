@@ -16,7 +16,7 @@ services:
         generateValue: true
       # CORS 허용 도메인 설정
       - key: ALLOWED_ORIGINS
-        value: https://ming-Jo.github.io
+        value: https://ming-jo.github.io
       # Rate Limiting 설정
       - key: RATE_LIMIT_MAX
         value: '100'

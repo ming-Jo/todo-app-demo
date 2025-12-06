@@ -27,11 +27,16 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    // 허용된 origin인지 확인
-    if (allowedOrigins.includes(origin)) {
+    // 허용된 origin인지 확인 (대소문자 구분 없이)
+    const normalizedOrigin = origin.toLowerCase();
+    const isAllowed = allowedOrigins.some(
+      (allowed) => allowed.toLowerCase() === normalizedOrigin
+    );
+
+    if (isAllowed) {
       callback(null, true);
     } else {
-      console.warn(`CORS blocked origin: ${origin}`);
+      console.warn(`CORS blocked origin: ${origin} (allowed: ${allowedOrigins.join(', ')})`);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -122,18 +127,26 @@ function generateUUID() {
   // crypto.randomUUID()는 Node.js 14.17.0+ 에서 사용 가능
   // 하위 호환성을 위해 randomBytes 사용
   if (typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
+    try {
+      return crypto.randomUUID();
+    } catch (error) {
+      // randomUUID()가 실패하면 fallback 사용
+      console.warn('crypto.randomUUID() failed, using fallback:', error);
+    }
   }
   // fallback: randomBytes를 사용한 UUID v4 생성
   const bytes = crypto.randomBytes(16);
-  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
-  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant
+  // Buffer를 배열로 변환하여 수정
+  const byteArray = Array.from(bytes);
+  byteArray[6] = (byteArray[6] & 0x0f) | 0x40; // version 4
+  byteArray[8] = (byteArray[8] & 0x3f) | 0x80; // variant
+  const hex = Buffer.from(byteArray).toString('hex');
   return [
-    bytes.toString('hex', 0, 4),
-    bytes.toString('hex', 4, 6),
-    bytes.toString('hex', 6, 8),
-    bytes.toString('hex', 8, 10),
-    bytes.toString('hex', 10, 16),
+    hex.substring(0, 8),
+    hex.substring(8, 12),
+    hex.substring(12, 16),
+    hex.substring(16, 20),
+    hex.substring(20, 32),
   ].join('-');
 }
 

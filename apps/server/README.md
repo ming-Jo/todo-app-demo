@@ -58,11 +58,14 @@ Render에서 Health Check Path를 `/health`로 설정하면 sleep 모드를 방�
 - `ALLOWED_ORIGINS`: 허용할 도메인 목록 (쉼표로 구분)
   - 예: `https://your-username.github.io,http://localhost:5173`
 
-**Render에서 설정:**
+**Render에서 설정 (권장):**
 
 1. Render 대시보드 → 서비스 → Environment
 2. `ALLOWED_ORIGINS` 환경 변수 추가
-3. 값: `https://your-github-pages-url.github.io` (실제 GitHub Pages URL)
+3. 값: `https://ming-jo.github.io` (실제 GitHub Pages URL)
+4. **중요**: `render.yaml`의 환경 변수가 적용되지 않는 경우, 대시보드에서 직접 설정해야 합니다.
+
+**참고**: `render.yaml` 파일이 루트 디렉토리에 있지 않으면 환경 변수가 적용되지 않을 수 있습니다.
 
 ### Rate Limiting
 
