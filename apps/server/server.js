@@ -117,13 +117,34 @@ async function writeTodos(todos) {
   await fs.writeFile(DATA_FILE, JSON.stringify(todos, null, 2), 'utf-8');
 }
 
+// UUID v4 생성 함수 (Node.js 버전 호환성)
+function generateUUID() {
+  // crypto.randomUUID()는 Node.js 14.17.0+ 에서 사용 가능
+  // 하위 호환성을 위해 randomBytes 사용
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // fallback: randomBytes를 사용한 UUID v4 생성
+  const bytes = crypto.randomBytes(16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant
+  return [
+    bytes.toString('hex', 0, 4),
+    bytes.toString('hex', 4, 6),
+    bytes.toString('hex', 6, 8),
+    bytes.toString('hex', 8, 10),
+    bytes.toString('hex', 10, 16),
+  ].join('-');
+}
+
 // GET /user-id - 새로운 사용자 ID 발급
 app.get('/user-id', async (req, res) => {
   try {
     // UUID v4 생성
-    const userId = crypto.randomUUID();
+    const userId = generateUUID();
     res.json({ userId });
   } catch (error) {
+    console.error('Failed to generate user ID:', error);
     res.status(500).json({ error: 'Failed to generate user ID' });
   }
 });

@@ -4,6 +4,7 @@ todo CRUD 기능을 제공하는 Express 서버입니다.
 
 ## 기능
 
+- GET `/user-id` - 새로운 사용자 ID 발급 (UUID v4)
 - GET `/todos` - 모든 todos 조회
 - GET `/todos/:id` - 특정 todo 조회
 - POST `/todos` - 새 todo 생성
