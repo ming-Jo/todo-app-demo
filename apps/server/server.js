@@ -71,16 +71,22 @@ app.use((req, res, next) => {
     return next();
   }
 
-  // 쿠키에서 사용자 ID 읽기 (세션과 별개로 영구 저장)
+  // 쿠키에서 사용자 ID 읽기 (우선순위 1)
   let userId = req.cookies['todo-user-id'];
 
-  // 디버깅: 쿠키 정보 로그
-  if (req.path === '/todos' && req.method === 'GET') {
-    console.log(`[쿠키 확인] 모든 쿠키:`, req.cookies);
-    console.log(`[쿠키 확인] todo-user-id:`, userId);
+  // 쿠키가 없으면 헤더에서 읽기 (모바일 브라우저 fallback)
+  if (!userId && req.headers['x-user-id']) {
+    userId = req.headers['x-user-id'];
+    console.log(`[${req.method} ${req.path}] 헤더에서 userId 읽음: ${userId}`);
   }
 
-  // 쿠키에 사용자 ID가 없으면 새로 생성
+  // 디버깅: 쿠키 정보 로그 (모든 요청)
+  console.log(`[${req.method} ${req.path}] 쿠키:`, req.cookies);
+  console.log(`[${req.method} ${req.path}] 헤더 x-user-id:`, req.headers['x-user-id']);
+  console.log(`[${req.method} ${req.path}] 최종 userId:`, userId);
+  console.log(`[${req.method} ${req.path}] User-Agent:`, req.headers['user-agent']);
+
+  // 쿠키와 헤더 모두 없으면 새로 생성
   if (!userId) {
     userId = generateUUID();
     // 쿠키에 사용자 ID 저장 (30일 유지)
@@ -93,14 +99,18 @@ app.use((req, res, next) => {
     if (process.env.NODE_ENV === 'production') {
       cookieOptions.secure = true; // HTTPS 필수
       cookieOptions.sameSite = 'none'; // cross-site 요청 허용
+      // domain 설정은 하지 않음 (서버 도메인에 자동 설정됨)
     } else {
       // 개발 환경 (same-site 요청)
       cookieOptions.sameSite = 'lax'; // CSRF 공격 방지
     }
 
     res.cookie('todo-user-id', userId, cookieOptions);
-    console.log(`[새 사용자 ID 생성] ${userId}`);
+    console.log(`[새 사용자 ID 생성] ${userId}, 쿠키 옵션:`, cookieOptions);
   }
+
+  // 응답 헤더에 userId 포함 (모바일 브라우저 쿠키 문제 대비)
+  res.setHeader('X-User-Id', userId);
 
   // req.userId에 저장하여 다음 미들웨어에서 사용
   req.userId = userId;
@@ -211,8 +221,16 @@ app.get('/todos', async (req, res) => {
       return res.status(500).json({ error: 'Database not configured' });
     }
     console.log(`[GET /todos] userId: ${req.userId}`);
+    console.log(`[GET /todos] 쿠키에서 읽은 userId:`, req.cookies['todo-user-id']);
     const todos = await getUserTodos(req.userId);
     console.log(`[GET /todos] found ${todos.length} todos`);
+    if (todos.length > 0) {
+      console.log(`[GET /todos] 첫 번째 todo의 user_id:`, todos[0].userId);
+    }
+
+    // 응답 헤더에 userId 포함 (모바일 브라우저 쿠키 문제 대비)
+    res.setHeader('X-User-Id', req.userId);
+
     res.json(todos);
   } catch (error) {
     console.error('Failed to read todos:', error);
@@ -264,6 +282,8 @@ app.post('/todos', async (req, res) => {
     }
 
     console.log(`[POST /todos] userId: ${req.userId}, title: ${title}`);
+    console.log(`[POST /todos] 쿠키에서 읽은 userId:`, req.cookies['todo-user-id']);
+
     const { data, error } = await supabase
       .from('todos')
       .insert({
@@ -280,6 +300,11 @@ app.post('/todos', async (req, res) => {
     }
 
     console.log(`[POST /todos] Created todo:`, data);
+    console.log(`[POST /todos] 저장된 user_id:`, data.user_id);
+
+    // 응답 헤더에 userId 포함 (모바일 브라우저 쿠키 문제 대비)
+    res.setHeader('X-User-Id', req.userId);
+
     res.status(201).json({
       id: data.id,
       title: data.title,

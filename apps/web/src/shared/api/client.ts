@@ -20,8 +20,28 @@ const getApiBaseURL = () => {
   return '';
 };
 
-// 세션 기반 인증 사용 - 서버에서 자동으로 세션 ID 생성 및 쿠키 관리
-// 필요시 /user-id 엔드포인트를 호출하여 현재 사용자 ID를 조회할 수 있습니다
+// localStorage에서 userId 저장/조회 (모바일 브라우저 쿠키 fallback)
+const USER_ID_STORAGE_KEY = 'todo-app-user-id';
+
+function getOrCreateUserId(): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  const userId = localStorage.getItem(USER_ID_STORAGE_KEY);
+  if (!userId) {
+    // 서버에서 userId를 받아올 수 있도록 빈 문자열 반환
+    // 서버 응답에서 userId를 받아서 저장
+    return '';
+  }
+  return userId;
+}
+
+function saveUserId(userId: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(USER_ID_STORAGE_KEY, userId);
+  }
+}
 
 export const apiClient = axios.create({
   baseURL: getApiBaseURL(),
@@ -31,5 +51,37 @@ export const apiClient = axios.create({
   withCredentials: true, // 쿠키 자동 전송 (세션 기반 인증)
 });
 
-// 세션 기반 인증 사용 - 쿠키가 자동으로 전송되므로 헤더 추가 불필요
-// 필요시 사용자 ID를 조회할 수 있도록 getOrCreateUserId 함수는 유지
+// 요청 인터셉터: 쿠키 fallback으로 헤더에 userId 추가
+apiClient.interceptors.request.use(
+  (config) => {
+    const userId = getOrCreateUserId();
+    if (userId) {
+      config.headers['x-user-id'] = userId;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  },
+);
+
+// 응답 인터셉터: 서버에서 userId를 받아서 localStorage에 저장
+apiClient.interceptors.response.use(
+  (response) => {
+    // 응답 헤더에서 userId 확인
+    const userIdFromHeader = response.headers['x-user-id'];
+    if (userIdFromHeader) {
+      saveUserId(userIdFromHeader);
+    }
+
+    // 응답 본문에서 userId 확인 (user-id 엔드포인트)
+    if (response.data?.userId) {
+      saveUserId(response.data.userId);
+    }
+
+    return response;
+  },
+  (error) => {
+    return Promise.reject(error);
+  },
+);
