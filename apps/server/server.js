@@ -74,17 +74,32 @@ app.use((req, res, next) => {
   // 쿠키에서 사용자 ID 읽기 (세션과 별개로 영구 저장)
   let userId = req.cookies['todo-user-id'];
 
+  // 디버깅: 쿠키 정보 로그
+  if (req.path === '/todos' && req.method === 'GET') {
+    console.log(`[쿠키 확인] 모든 쿠키:`, req.cookies);
+    console.log(`[쿠키 확인] todo-user-id:`, userId);
+  }
+
   // 쿠키에 사용자 ID가 없으면 새로 생성
   if (!userId) {
     userId = generateUUID();
     // 쿠키에 사용자 ID 저장 (30일 유지)
-    res.cookie('todo-user-id', userId, {
+    const cookieOptions = {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30일
       httpOnly: true, // XSS 공격 방지
-      secure: process.env.NODE_ENV === 'production', // HTTPS에서만 전송
-      sameSite: 'lax', // CSRF 공격 방지
-    });
-    console.log(`새 사용자 ID 생성: ${userId}`);
+    };
+
+    // 프로덕션 환경 (cross-site 요청)
+    if (process.env.NODE_ENV === 'production') {
+      cookieOptions.secure = true; // HTTPS 필수
+      cookieOptions.sameSite = 'none'; // cross-site 요청 허용
+    } else {
+      // 개발 환경 (same-site 요청)
+      cookieOptions.sameSite = 'lax'; // CSRF 공격 방지
+    }
+
+    res.cookie('todo-user-id', userId, cookieOptions);
+    console.log(`[새 사용자 ID 생성] ${userId}`);
   }
 
   // req.userId에 저장하여 다음 미들웨어에서 사용
@@ -165,12 +180,21 @@ app.get('/user-id', async (req, res) => {
     if (!userId) {
       userId = generateUUID();
       // 쿠키에 사용자 ID 저장
-      res.cookie('todo-user-id', userId, {
+      const cookieOptions = {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30일
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-      });
+      };
+
+      // 프로덕션 환경 (cross-site 요청)
+      if (process.env.NODE_ENV === 'production') {
+        cookieOptions.secure = true; // HTTPS 필수
+        cookieOptions.sameSite = 'none'; // cross-site 요청 허용
+      } else {
+        // 개발 환경 (same-site 요청)
+        cookieOptions.sameSite = 'lax'; // CSRF 공격 방지
+      }
+
+      res.cookie('todo-user-id', userId, cookieOptions);
     }
 
     res.json({ userId });
@@ -186,7 +210,9 @@ app.get('/todos', async (req, res) => {
     if (!supabase) {
       return res.status(500).json({ error: 'Database not configured' });
     }
+    console.log(`[GET /todos] userId: ${req.userId}`);
     const todos = await getUserTodos(req.userId);
+    console.log(`[GET /todos] found ${todos.length} todos`);
     res.json(todos);
   } catch (error) {
     console.error('Failed to read todos:', error);
@@ -237,6 +263,7 @@ app.post('/todos', async (req, res) => {
       return res.status(400).json({ error: 'Title is required' });
     }
 
+    console.log(`[POST /todos] userId: ${req.userId}, title: ${title}`);
     const { data, error } = await supabase
       .from('todos')
       .insert({
@@ -248,9 +275,11 @@ app.post('/todos', async (req, res) => {
       .single();
 
     if (error) {
+      console.error('[POST /todos] Supabase error:', error);
       throw error;
     }
 
+    console.log(`[POST /todos] Created todo:`, data);
     res.status(201).json({
       id: data.id,
       title: data.title,
