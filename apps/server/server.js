@@ -73,6 +73,7 @@ app.use((req, res, next) => {
 
   // 쿠키에서 사용자 ID 읽기 (우선순위 1)
   let userId = req.cookies['todo-user-id'];
+  const hasCookie = !!userId;
 
   // 쿠키가 없으면 헤더에서 읽기 (모바일 브라우저 fallback)
   if (!userId && req.headers['x-user-id']) {
@@ -86,10 +87,8 @@ app.use((req, res, next) => {
   console.log(`[${req.method} ${req.path}] 최종 userId:`, userId);
   console.log(`[${req.method} ${req.path}] User-Agent:`, req.headers['user-agent']);
 
-  // 쿠키와 헤더 모두 없으면 새로 생성
-  if (!userId) {
-    userId = generateUUID();
-    // 쿠키에 사용자 ID 저장 (30일 유지)
+  // 쿠키 설정 함수 (재사용)
+  const setCookieOptions = () => {
     const cookieOptions = {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30일
       httpOnly: true, // XSS 공격 방지
@@ -99,14 +98,23 @@ app.use((req, res, next) => {
     if (process.env.NODE_ENV === 'production') {
       cookieOptions.secure = true; // HTTPS 필수
       cookieOptions.sameSite = 'none'; // cross-site 요청 허용
-      // domain 설정은 하지 않음 (서버 도메인에 자동 설정됨)
     } else {
       // 개발 환경 (same-site 요청)
       cookieOptions.sameSite = 'lax'; // CSRF 공격 방지
     }
+    return cookieOptions;
+  };
 
-    res.cookie('todo-user-id', userId, cookieOptions);
-    console.log(`[새 사용자 ID 생성] ${userId}, 쿠키 옵션:`, cookieOptions);
+  // 쿠키와 헤더 모두 없으면 새로 생성
+  if (!userId) {
+    userId = generateUUID();
+    res.cookie('todo-user-id', userId, setCookieOptions());
+    console.log(`[새 사용자 ID 생성] ${userId}`);
+  } else if (!hasCookie && userId) {
+    // 쿠키가 만료되었지만 헤더로 userId를 받은 경우 쿠키 갱신
+    // (30일 후에도 계속 같은 유저로 인식되도록)
+    res.cookie('todo-user-id', userId, setCookieOptions());
+    console.log(`[쿠키 갱신] ${userId} (만료된 쿠키 복구)`);
   }
 
   // 응답 헤더에 userId 포함 (모바일 브라우저 쿠키 문제 대비)
