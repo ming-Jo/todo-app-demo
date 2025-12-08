@@ -1,19 +1,25 @@
 /* eslint-env node */
 import crypto from 'crypto';
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
+import { createClient } from '@supabase/supabase-js';
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
 const PORT = process.env.PORT || 3001;
-const DATA_FILE = path.join(__dirname, 'data', 'todos.json');
+
+// Supabase 클라이언트 초기화
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_API_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('⚠️ Supabase 환경 변수가 설정되지 않았습니다.');
+  console.warn('⚠️ SUPABASE_URL과 SUPABASE_API_KEY를 설정해주세요.');
+}
+
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 // CORS 설정 - 특정 도메인만 허용
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -29,9 +35,7 @@ const corsOptions = {
 
     // 허용된 origin인지 확인 (대소문자 구분 없이)
     const normalizedOrigin = origin.toLowerCase();
-    const isAllowed = allowedOrigins.some(
-      (allowed) => allowed.toLowerCase() === normalizedOrigin
-    );
+    const isAllowed = allowedOrigins.some((allowed) => allowed.toLowerCase() === normalizedOrigin);
 
     if (isAllowed) {
       callback(null, true);
@@ -58,26 +62,33 @@ const limiter = rateLimit({
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(cookieParser());
 
-// 사용자 ID 추출 미들웨어 (헬스체크 및 사용자 ID 발급 엔드포인트는 제외)
+// 사용자 ID 추출 미들웨어 (헬스체크는 제외)
 app.use((req, res, next) => {
-  // 헬스체크 및 사용자 ID 발급 엔드포인트는 사용자 ID 검증 제외
-  if (req.path === '/health' || req.path === '/user-id') {
+  // 헬스체크는 사용자 ID 검증 제외
+  if (req.path === '/health') {
     return next();
   }
 
-  // x-user-id 헤더에서 사용자 ID 추출
-  const userId = req.headers['x-user-id'];
+  // 쿠키에서 사용자 ID 읽기 (세션과 별개로 영구 저장)
+  let userId = req.cookies['todo-user-id'];
 
+  // 쿠키에 사용자 ID가 없으면 새로 생성
   if (!userId) {
-    return res.status(401).json({ error: 'User ID is required. Please provide x-user-id header.' });
+    userId = generateUUID();
+    // 쿠키에 사용자 ID 저장 (30일 유지)
+    res.cookie('todo-user-id', userId, {
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30일
+      httpOnly: true, // XSS 공격 방지
+      secure: process.env.NODE_ENV === 'production', // HTTPS에서만 전송
+      sameSite: 'lax', // CSRF 공격 방지
+    });
+    console.log(`새 사용자 ID 생성: ${userId}`);
   }
 
-  // 헤더 값이 배열인 경우 첫 번째 값 사용, 아니면 문자열 그대로 사용
-  const userIdString = Array.isArray(userId) ? userId[0] : String(userId);
-
   // req.userId에 저장하여 다음 미들웨어에서 사용
-  req.userId = userIdString; // UUID 문자열로 저장
+  req.userId = userId;
 
   next();
 });
@@ -91,35 +102,29 @@ app.use((req, res, next) => {
   limiter(req, res, next);
 });
 
-// 데이터 디렉토리 생성 (없는 경우)
-async function ensureDataDirectory() {
-  const dataDir = path.dirname(DATA_FILE);
-  try {
-    await fs.access(dataDir);
-  } catch {
-    await fs.mkdir(dataDir, { recursive: true });
+// Supabase에서 사용자별 todos 조회
+async function getUserTodos(userId) {
+  if (!supabase) {
+    throw new Error('Supabase가 초기화되지 않았습니다.');
   }
-}
 
-// JSON 파일에서 데이터 읽기
-async function readTodos() {
-  try {
-    await ensureDataDirectory();
-    const data = await fs.readFile(DATA_FILE, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      // 파일이 없으면 빈 배열 반환
-      return [];
-    }
+  const { data, error } = await supabase
+    .from('todos')
+    .select('*')
+    .eq('user_id', userId)
+    .order('id', { ascending: true });
+
+  if (error) {
     throw error;
   }
-}
 
-// JSON 파일에 데이터 쓰기
-async function writeTodos(todos) {
-  await ensureDataDirectory();
-  await fs.writeFile(DATA_FILE, JSON.stringify(todos, null, 2), 'utf-8');
+  // Supabase에서 가져온 데이터를 기존 형식으로 변환
+  return (data || []).map((todo) => ({
+    id: todo.id,
+    title: todo.title,
+    completed: todo.completed,
+    userId: todo.user_id,
+  }));
 }
 
 // UUID v4 생성 함수 (Node.js 버전 호환성)
@@ -150,26 +155,41 @@ function generateUUID() {
   ].join('-');
 }
 
-// GET /user-id - 새로운 사용자 ID 발급
+// GET /user-id - 현재 사용자 ID 조회 (쿠키 기반)
 app.get('/user-id', async (req, res) => {
   try {
-    // UUID v4 생성
-    const userId = generateUUID();
+    // 쿠키에서 사용자 ID 읽기
+    let userId = req.cookies['todo-user-id'];
+
+    // 쿠키에 사용자 ID가 없으면 새로 생성
+    if (!userId) {
+      userId = generateUUID();
+      // 쿠키에 사용자 ID 저장
+      res.cookie('todo-user-id', userId, {
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30일
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      });
+    }
+
     res.json({ userId });
   } catch (error) {
-    console.error('Failed to generate user ID:', error);
-    res.status(500).json({ error: 'Failed to generate user ID' });
+    console.error('Failed to get user ID:', error);
+    res.status(500).json({ error: 'Failed to get user ID' });
   }
 });
 
 // GET /todos - 사용자별 todos 조회
 app.get('/todos', async (req, res) => {
   try {
-    const todos = await readTodos();
-    // 요청한 사용자의 todos만 필터링 (userId는 문자열로 비교)
-    const userTodos = todos.filter((t) => String(t.userId) === String(req.userId));
-    res.json(userTodos);
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+    const todos = await getUserTodos(req.userId);
+    res.json(todos);
   } catch (error) {
+    console.error('Failed to read todos:', error);
     res.status(500).json({ error: 'Failed to read todos' });
   }
 });
@@ -177,16 +197,30 @@ app.get('/todos', async (req, res) => {
 // GET /todos/:id - 특정 todo 조회 (사용자별)
 app.get('/todos/:id', async (req, res) => {
   try {
-    const todos = await readTodos();
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
     const id = parseInt(req.params.id);
-    const todo = todos.find((t) => t.id === id && String(t.userId) === String(req.userId));
 
-    if (!todo) {
+    const { data, error } = await supabase
+      .from('todos')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', req.userId)
+      .single();
+
+    if (error || !data) {
       return res.status(404).json({ error: 'Todo not found' });
     }
 
-    res.json(todo);
+    res.json({
+      id: data.id,
+      title: data.title,
+      completed: data.completed,
+      userId: data.user_id,
+    });
   } catch (error) {
+    console.error('Failed to read todo:', error);
     res.status(500).json({ error: 'Failed to read todo' });
   }
 });
@@ -194,27 +228,37 @@ app.get('/todos/:id', async (req, res) => {
 // POST /todos - 새 todo 생성 (사용자별)
 app.post('/todos', async (req, res) => {
   try {
-    const todos = await readTodos();
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
     const { title, completed = false } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
     }
 
-    // 새 ID 생성 (기존 최대 ID + 1)
-    const maxId = todos.length > 0 ? Math.max(...todos.map((t) => t.id)) : 0;
-    const newTodo = {
-      id: maxId + 1,
-      title,
-      completed: Boolean(completed),
-      userId: req.userId, // 헤더에서 추출한 사용자 ID 사용
-    };
+    const { data, error } = await supabase
+      .from('todos')
+      .insert({
+        title,
+        completed: Boolean(completed),
+        user_id: req.userId,
+      })
+      .select()
+      .single();
 
-    todos.push(newTodo);
-    await writeTodos(todos);
+    if (error) {
+      throw error;
+    }
 
-    res.status(201).json(newTodo);
+    res.status(201).json({
+      id: data.id,
+      title: data.title,
+      completed: data.completed,
+      userId: data.user_id,
+    });
   } catch (error) {
+    console.error('Failed to create todo:', error);
     res.status(500).json({ error: 'Failed to create todo' });
   }
 });
@@ -222,25 +266,48 @@ app.post('/todos', async (req, res) => {
 // PUT /todos/:id - todo 전체 업데이트 (사용자별)
 app.put('/todos/:id', async (req, res) => {
   try {
-    const todos = await readTodos();
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
     const id = parseInt(req.params.id);
-    const index = todos.findIndex((t) => t.id === id && String(t.userId) === String(req.userId));
+    const { title, completed } = req.body;
 
-    if (index === -1) {
+    // 먼저 todo가 존재하고 사용자 소유인지 확인
+    const { data: existingTodo, error: checkError } = await supabase
+      .from('todos')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', req.userId)
+      .single();
+
+    if (checkError || !existingTodo) {
       return res.status(404).json({ error: 'Todo not found' });
     }
 
-    const { title, completed } = req.body;
-    todos[index] = {
-      id,
-      title: title ?? todos[index].title,
-      completed: completed !== undefined ? Boolean(completed) : todos[index].completed,
-      userId: req.userId, // 사용자 ID는 변경 불가
-    };
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (completed !== undefined) updateData.completed = Boolean(completed);
 
-    await writeTodos(todos);
-    res.json(todos[index]);
+    const { data, error } = await supabase
+      .from('todos')
+      .update(updateData)
+      .eq('id', id)
+      .eq('user_id', req.userId)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    res.json({
+      id: data.id,
+      title: data.title,
+      completed: data.completed,
+      userId: data.user_id,
+    });
   } catch (error) {
+    console.error('Failed to update todo:', error);
     res.status(500).json({ error: 'Failed to update todo' });
   }
 });
@@ -248,22 +315,48 @@ app.put('/todos/:id', async (req, res) => {
 // PATCH /todos/:id - todo 부분 업데이트 (사용자별)
 app.patch('/todos/:id', async (req, res) => {
   try {
-    const todos = await readTodos();
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
     const id = parseInt(req.params.id);
-    const index = todos.findIndex((t) => t.id === id && String(t.userId) === String(req.userId));
+    const { title, completed } = req.body;
 
-    if (index === -1) {
+    // 먼저 todo가 존재하고 사용자 소유인지 확인
+    const { data: existingTodo, error: checkError } = await supabase
+      .from('todos')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', req.userId)
+      .single();
+
+    if (checkError || !existingTodo) {
       return res.status(404).json({ error: 'Todo not found' });
     }
 
-    const { title, completed } = req.body;
-    if (title !== undefined) todos[index].title = title;
-    if (completed !== undefined) todos[index].completed = Boolean(completed);
-    // userId는 변경 불가 (헤더에서 추출한 사용자 ID로 고정)
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (completed !== undefined) updateData.completed = Boolean(completed);
 
-    await writeTodos(todos);
-    res.json(todos[index]);
+    const { data, error } = await supabase
+      .from('todos')
+      .update(updateData)
+      .eq('id', id)
+      .eq('user_id', req.userId)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    res.json({
+      id: data.id,
+      title: data.title,
+      completed: data.completed,
+      userId: data.user_id,
+    });
   } catch (error) {
+    console.error('Failed to update todo:', error);
     res.status(500).json({ error: 'Failed to update todo' });
   }
 });
@@ -271,19 +364,20 @@ app.patch('/todos/:id', async (req, res) => {
 // DELETE /todos/:id - todo 삭제 (사용자별)
 app.delete('/todos/:id', async (req, res) => {
   try {
-    const todos = await readTodos();
-    const id = parseInt(req.params.id);
-    const index = todos.findIndex((t) => t.id === id && String(t.userId) === String(req.userId));
-
-    if (index === -1) {
-      return res.status(404).json({ error: 'Todo not found' });
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
     }
+    const id = parseInt(req.params.id);
 
-    todos.splice(index, 1);
-    await writeTodos(todos);
+    const { error } = await supabase.from('todos').delete().eq('id', id).eq('user_id', req.userId);
+
+    if (error) {
+      throw error;
+    }
 
     res.status(200).json({});
   } catch (error) {
+    console.error('Failed to delete todo:', error);
     res.status(500).json({ error: 'Failed to delete todo' });
   }
 });
@@ -296,7 +390,7 @@ app.get('/health', (req, res) => {
 // 서버 시작
 app.listen(PORT, () => {
   console.log(`Todo API server is running on http://localhost:${PORT}`);
-  console.log(`Data file: ${DATA_FILE}`);
+  console.log(`Database: ${supabase ? 'Supabase (configured)' : 'Not configured'}`);
   console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
   console.log(`Rate limit: ${process.env.RATE_LIMIT_MAX || '100'} requests per 15 minutes`);
 });
