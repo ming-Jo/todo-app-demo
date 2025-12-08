@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Trash2, Edit2, Check, X } from 'lucide-react';
+import { Trash2, Edit2, Check, X, Loader2 } from 'lucide-react';
 
 import { todoApi, type Todo } from '@entities/todo';
 
@@ -69,6 +69,8 @@ export const TodoItem = ({ todo, viewMode = 'list' }: TodoItemProps) => {
     }
   };
 
+  const isProcessing = updateMutation.isPending || deleteMutation.isPending;
+
   return (
     <div
       className={cn(
@@ -76,6 +78,7 @@ export const TodoItem = ({ todo, viewMode = 'list' }: TodoItemProps) => {
         'shadow-sm transition-all duration-300',
         'hover:bg-accent/50 hover:border-accent-foreground/20',
         todo.completed && 'opacity-75 bg-muted/30',
+        isProcessing && 'opacity-60 pointer-events-none',
       )}
     >
       {isEditing ? (
@@ -97,7 +100,11 @@ export const TodoItem = ({ todo, viewMode = 'list' }: TodoItemProps) => {
               disabled={updateMutation.isPending || !editingTitle.trim()}
               className='text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-colors'
             >
-              <Check className='w-4 h-4 mr-1.5' />
+              {updateMutation.isPending ? (
+                <Loader2 className='w-4 h-4 mr-1.5 animate-spin text-sky-500' />
+              ) : (
+                <Check className='w-4 h-4 mr-1.5' />
+              )}
               저장
             </Button>
             <Button
@@ -120,18 +127,23 @@ export const TodoItem = ({ todo, viewMode = 'list' }: TodoItemProps) => {
               viewMode === 'list' && 'pr-20 group-hover:pr-20',
             )}
           >
-            <div className='pt-0.5 flex-shrink-0'>
-              <Checkbox
-                checked={todo.completed}
-                onChange={handleToggle}
-                disabled={updateMutation.isPending || isEditing}
-                className='transition-all'
-              />
+            <div className='pt-0.5 flex-shrink-0 flex items-center justify-center w-5 h-5'>
+              {updateMutation.isPending ? (
+                <Loader2 className='w-4 h-4 animate-spin text-sky-500' />
+              ) : (
+                <Checkbox
+                  checked={todo.completed}
+                  onChange={handleToggle}
+                  disabled={isEditing}
+                  className='transition-all'
+                />
+              )}
             </div>
             <span
               className={cn(
                 'flex-1 text-base leading-relaxed font-medium transition-all duration-200 break-words',
                 todo.completed ? 'line-through text-muted-foreground/60' : 'text-foreground',
+                updateMutation.isPending && 'opacity-60',
               )}
             >
               {todo.title}
@@ -158,7 +170,11 @@ export const TodoItem = ({ todo, viewMode = 'list' }: TodoItemProps) => {
                   className='h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all'
                   title='삭제'
                 >
-                  <Trash2 className='w-3.5 h-3.5' />
+                  {deleteMutation.isPending ? (
+                    <Loader2 className='w-3.5 h-3.5 animate-spin text-sky-500' />
+                  ) : (
+                    <Trash2 className='w-3.5 h-3.5' />
+                  )}
                 </Button>
               </div>
             </div>
@@ -183,7 +199,11 @@ export const TodoItem = ({ todo, viewMode = 'list' }: TodoItemProps) => {
                   className='h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all'
                   title='삭제'
                 >
-                  <Trash2 className='w-3.5 h-3.5' />
+                  {deleteMutation.isPending ? (
+                    <Loader2 className='w-3.5 h-3.5 animate-spin text-sky-500' />
+                  ) : (
+                    <Trash2 className='w-3.5 h-3.5' />
+                  )}
                 </Button>
               </div>
             </div>

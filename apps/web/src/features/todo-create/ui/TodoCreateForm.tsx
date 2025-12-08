@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 
 import { todoApi } from '@entities/todo';
 
@@ -43,7 +43,11 @@ export const TodoCreateForm = () => {
         variant='outline'
         disabled={createMutation.isPending || !title.trim()}
       >
-        <Plus className='w-4 h-4 mr-2' />
+        {createMutation.isPending ? (
+          <Loader2 className='w-4 h-4 mr-2 animate-spin text-sky-500' />
+        ) : (
+          <Plus className='w-4 h-4 mr-2' />
+        )}
         추가
       </Button>
     </form>
