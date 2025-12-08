@@ -6,7 +6,20 @@ import { Trash2, Edit2, Check, X, Loader2 } from 'lucide-react';
 import { todoApi, type Todo } from '@entities/todo';
 
 import { cn } from '@shared/lib/utils';
-import { Checkbox, Button, Input } from '@shared/ui';
+import {
+  Checkbox,
+  Button,
+  Input,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@shared/ui';
 
 interface TodoItemProps {
   todo: Todo;
@@ -16,6 +29,7 @@ interface TodoItemProps {
 export const TodoItem = ({ todo, viewMode = 'list' }: TodoItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingTitle, setEditingTitle] = useState(todo.title);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const updateMutation = useMutation({
@@ -31,6 +45,7 @@ export const TodoItem = ({ todo, viewMode = 'list' }: TodoItemProps) => {
     mutationFn: todoApi.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['todos'] });
+      setDeleteDialogOpen(false);
     },
   });
 
@@ -149,65 +164,101 @@ export const TodoItem = ({ todo, viewMode = 'list' }: TodoItemProps) => {
               {todo.title}
             </span>
           </div>
-          {viewMode === 'list' ? (
-            <div className='absolute right-0 top-0 flex gap-1 h-full items-center opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto'>
-              <div className='flex gap-1 bg-card rounded-lg p-1 shadow-lg border border-border'>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  onClick={handleEdit}
-                  disabled={updateMutation.isPending || deleteMutation.isPending}
-                  className='h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-all'
-                  title='편집'
-                >
-                  <Edit2 className='w-3.5 h-3.5' />
-                </Button>
-                <Button
-                  variant='ghost'
-                  size='icon'
+          <AlertDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+          >
+            {viewMode === 'list' ? (
+              <div className='absolute right-0 top-0 flex gap-1 h-full items-center opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto'>
+                <div className='flex gap-1 bg-card rounded-lg p-1 shadow-lg border border-border'>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    onClick={handleEdit}
+                    disabled={updateMutation.isPending || deleteMutation.isPending}
+                    className='h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-all'
+                    title='편집'
+                  >
+                    <Edit2 className='w-3.5 h-3.5' />
+                  </Button>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      disabled={deleteMutation.isPending}
+                      className='h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all'
+                      title='삭제'
+                    >
+                      {deleteMutation.isPending ? (
+                        <Loader2 className='w-3.5 h-3.5 animate-spin text-sky-500' />
+                      ) : (
+                        <Trash2 className='w-3.5 h-3.5' />
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                </div>
+              </div>
+            ) : (
+              <div className='absolute right-0 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto z-10'>
+                <div className='flex gap-1 bg-card rounded-lg p-1 shadow-lg border border-border'>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    onClick={handleEdit}
+                    disabled={updateMutation.isPending || deleteMutation.isPending}
+                    className='h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-all'
+                    title='편집'
+                  >
+                    <Edit2 className='w-3.5 h-3.5' />
+                  </Button>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      disabled={deleteMutation.isPending}
+                      className='h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all'
+                      title='삭제'
+                    >
+                      {deleteMutation.isPending ? (
+                        <Loader2 className='w-3.5 h-3.5 animate-spin text-sky-500' />
+                      ) : (
+                        <Trash2 className='w-3.5 h-3.5' />
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                </div>
+              </div>
+            )}
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>삭제</AlertDialogTitle>
+                <AlertDialogDescription>
+                  이 작업은 되돌릴 수 없습니다. 정말 삭제하시겠습니까?
+                  <div className='flex gap-2 bg-gray-100 p-4 mt-4 rounded-md'>
+                    <span className='shrink-0'>할 일:</span>
+                    <span className='text-slate-950 font-bold text-left'>{todo.title}</span>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleteMutation.isPending}>취소</AlertDialogCancel>
+                <AlertDialogAction
                   onClick={handleDelete}
                   disabled={deleteMutation.isPending}
-                  className='h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all'
-                  title='삭제'
+                  className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
                 >
                   {deleteMutation.isPending ? (
-                    <Loader2 className='w-3.5 h-3.5 animate-spin text-sky-500' />
+                    <>
+                      <Loader2 className='w-4 h-4 mr-2 animate-spin' />
+                      삭제 중...
+                    </>
                   ) : (
-                    <Trash2 className='w-3.5 h-3.5' />
+                    '삭제'
                   )}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className='absolute right-0 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto z-10'>
-              <div className='flex gap-1 bg-card rounded-lg p-1 shadow-lg border border-border'>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  onClick={handleEdit}
-                  disabled={updateMutation.isPending || deleteMutation.isPending}
-                  className='h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-all'
-                  title='편집'
-                >
-                  <Edit2 className='w-3.5 h-3.5' />
-                </Button>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  onClick={handleDelete}
-                  disabled={deleteMutation.isPending}
-                  className='h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all'
-                  title='삭제'
-                >
-                  {deleteMutation.isPending ? (
-                    <Loader2 className='w-3.5 h-3.5 animate-spin text-sky-500' />
-                  ) : (
-                    <Trash2 className='w-3.5 h-3.5' />
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
     </div>
