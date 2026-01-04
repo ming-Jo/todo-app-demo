@@ -97,6 +97,14 @@ Supabase 대시보드의 SQL Editor에서 `apps/server/supabase-setup.sql` 파�
 - `todos` 테이블 (id, title, completed, user_id, created_at, updated_at)
 - 사용자별 조회를 위한 인덱스
 - `updated_at` 자동 업데이트 트리거
+- **RLS (Row Level Security) 명시적 비활성화** - 보안 에러 방지
+
+**⚠️ 보안 에러 해결 방법:**
+
+- `supabase-setup.sql`을 실행하면 RLS가 자동으로 비활성화됩니다
+- 만약 보안 에러가 계속 발생한다면:
+  1. Supabase 대시보드 → Authentication → Policies에서 `todos` 테이블의 RLS가 비활성화되어 있는지 확인
+  2. Service Role Key를 사용하는지 확인 (Anon Key는 RLS에 영향을 받음)
 
 ## 환경 변수 설정
 
@@ -114,8 +122,15 @@ Supabase 대시보드의 SQL Editor에서 `apps/server/supabase-setup.sql` 파�
 ```env
 NODE_ENV=development
 SUPABASE_URL=https://my-project.supabase.co
-SUPABASE_API_KEY=my-anon-key
+SUPABASE_API_KEY=my-service-role-key
 ```
+
+**⚠️ 중요: API 키 선택**
+
+- **Service Role Key (권장)**: 서버 사이드에서 사용. RLS를 우회하여 모든 작업 수행 가능
+- **Anon Key**: RLS가 활성화되어 있으면 보안 에러 발생 가능
+
+Service Role Key는 Supabase 대시보드 → Settings → API → `service_role` secret 키에서 확인할 수 있습니다.
 
 #### 프로덕션 환경
 
@@ -124,7 +139,10 @@ SUPABASE_API_KEY=my-anon-key
 **필수 환경 변수:**
 
 - `SUPABASE_URL`: Supabase 프로젝트 URL
-- `SUPABASE_API_KEY`: Supabase Anon Key
+- `SUPABASE_API_KEY`: Supabase Service Role Key (권장) 또는 Anon Key
+  - **Service Role Key 권장**: 서버 사이드에서 RLS를 우회하여 안정적으로 동작
+  - Service Role Key는 Supabase 대시보드 → Settings → API → `service_role` secret 키
+  - Anon Key 사용 시 RLS가 비활성화되어 있어야 함
 
 **선택 환경 변수:**
 

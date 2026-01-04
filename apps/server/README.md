@@ -44,14 +44,33 @@ pnpm dev
 
 3. **환경 변수 설정**
    - Supabase 대시보드 → Settings → API
-   - `Project URL`과 `anon public` 키를 복사
+   - `Project URL`과 **Service Role Key** (권장) 또는 `anon public` 키를 복사
    - Render 대시보드 → 서비스 → Environment에 다음 환경 변수 추가:
      - `SUPABASE_URL`: Project URL
-     - `SUPABASE_API_KEY`: anon public 키
+     - `SUPABASE_API_KEY`: **Service Role Key** (권장) 또는 anon public 키
+
+   **⚠️ 중요: API 키 선택**
+   - **Service Role Key (권장)**: 서버 사이드에서 사용. RLS를 우회하여 모든 작업 수행 가능
+   - **Anon Key**: RLS가 비활성화되어 있어야 함. 활성화되어 있으면 보안 에러 발생 가능
+   - Service Role Key는 Supabase 대시보드 → Settings → API → `service_role` secret 키
 
 **로컬 개발 환경:**
 
 `apps/server` 디렉토리에 `.env` 파일을 생성:
+
+```env
+NODE_ENV=development
+SUPABASE_URL=https://my-project.supabase.co
+SUPABASE_API_KEY=my-service-role-key
+```
+
+**⚠️ 보안 에러 해결 방법:**
+
+- `supabase-setup.sql`을 실행하면 RLS가 자동으로 비활성화됩니다
+- 만약 보안 에러가 계속 발생한다면:
+  1. Supabase 대시보드 → Authentication → Policies에서 `todos` 테이블의 RLS가 비활성화되어 있는지 확인
+  2. Service Role Key를 사용하는지 확인 (Anon Key는 RLS에 영향을 받음)
+  3. `supabase-setup.sql`을 다시 실행하여 RLS를 명시적으로 비활성화
 
 **참고**:
 
